@@ -174,6 +174,25 @@ class CarController(CarControllerBase, GasInterceptorCarController):
 
     # *** gas and brake ***
 
+    hybrid_op_stop_hold = (
+      bool(self.CP.flags & ToyotaFlags.HYBRID.value) and
+      self.CP.carFingerprint in NO_STOP_TIMER_CAR and
+      self.CP.openpilotLongitudinalControl and
+      CC.longActive and
+      CS.out.standstill and
+      actuators.accel <= 0.
+    )
+
+    if hybrid_op_stop_hold:
+      self.standstill_req = True
+    elif (
+      bool(self.CP.flags & ToyotaFlags.HYBRID.value) and
+      self.CP.carFingerprint in NO_STOP_TIMER_CAR and
+      self.CP.openpilotLongitudinalControl and
+      (not CC.longActive or not CS.out.standstill or actuators.accel > 0.)
+    ):
+      self.standstill_req = False
+
     # on entering standstill, send standstill request for older TSS-P cars that aren't designed to stay engaged at a stop
     if self.CP.carFingerprint not in NO_STOP_TIMER_CAR or self.CP_SP.enableGasInterceptor:
       if CS.out.standstill and not self.last_standstill and (self.CP_SP.enableGasInterceptor or not self.CP_SP.flags & ToyotaFlagsSP.STOP_AND_GO_HACK):
